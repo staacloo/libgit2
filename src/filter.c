@@ -426,7 +426,8 @@ static int filter_list_check_attributes(
 	git_repository *repo,
 	git_attr_session *attr_session,
 	git_filter_def *fdef,
-	const git_filter_source *src)
+	const git_filter_source *src,
+	uint32_t flags)
 {
 	int error;
 	size_t i;
@@ -434,7 +435,7 @@ static int filter_list_check_attributes(
 	GITERR_CHECK_ALLOC(strs);
 
 	error = git_attr_get_many_with_session(
-		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs);
+		strs, repo, attr_session, flags, src->path, fdef->nattrs, fdef->attrs);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {
@@ -492,6 +493,7 @@ int git_filter_list__load_ext(
 	git_filter_options *filter_opts)
 {
 	int error = 0;
+	uint32_t attr_flags = 0;
 	git_filter_list *fl = NULL;
 	git_filter_source src = { 0 };
 	git_filter_entry *fe;
@@ -510,6 +512,8 @@ int git_filter_list__load_ext(
 
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
+	if (mode == GIT_FILTER_TO_WORKTREE)
+		attr_flags = GIT_ATTR_CHECK_INDEX_THEN_FILE;
 
 	git_vector_foreach(&filter_registry.filters, idx, fdef) {
 		const char **values = NULL;
@@ -520,7 +524,7 @@ int git_filter_list__load_ext(
 
 		if (fdef->nattrs > 0) {
 			error = filter_list_check_attributes(
-				&values, repo, filter_opts->attr_session, fdef, &src);
+				&values, repo, filter_opts->attr_session, fdef, &src, attr_flags);
 
 			if (error == GIT_ENOTFOUND) {
 				error = 0;

@@ -462,15 +462,20 @@ static int push_attr_file(
 static int push_one_attr(void *ref, const char *path)
 {
 	int error = 0, n_src, i;
+	size_t n_len;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
 	git_attr_file_source src[2];
 
 	n_src = attr_decide_sources(
 		info->flags, info->workdir != NULL, info->index != NULL, src);
 
-	for (i = 0; !error && i < n_src; ++i)
+	n_len = info->files->length;
+	for (i = 0; !error && i < n_src; ++i) {
 		error = push_attr_file(info->repo, info->attr_session,
 			info->files, src[i], path, GIT_ATTR_FILE);
+		if (info->files->length > n_len)
+			break;
+	}
 
 	return error;
 }
